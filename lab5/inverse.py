@@ -1,4 +1,4 @@
-from typing import Set, List, Callable, Iterable
+from typing import Set, List, Callable, Iterable, Dict
 
 Way = List[int]
 
@@ -8,12 +8,16 @@ class WaysCalculator():
         start: int, finish: int,
         visit_rule: Callable[[int], int],
         allowed_operations: Iterable[Callable[[int], int]],
+        use_cache: bool = False,
     ):
         self._store: List[Way] = None
+        self._cache: Dict[int, Way] = {}
+        self._use_cache = use_cache
         self._start = start
         self._finish = finish
         self._visit_rule = visit_rule
         self._allowed_operations = allowed_operations
+        self.call_count = 0
 
         if start <= finish:
             self._check_finish = lambda start, finish: start >= finish
@@ -29,6 +33,7 @@ class WaysCalculator():
         return self._store
 
     def _calculate_ways(self, start: int, finish: int, way_prefix: Way):
+        self.call_count += 1
         way_prefix = way_prefix.copy()
         way_prefix.append(start)
         if self._check_finish(start, finish):
@@ -42,7 +47,15 @@ class WaysCalculator():
             if new_point is not None
         }
         for new_start in new_points:
-            self._calculate_ways(new_start, finish, way_prefix)
+            if self._use_cache and new_start in self._cache:
+                for way in self._cache[new_start]:
+                    self._store.append(way_prefix + way)
+            else:
+                count_before = len(self._store)
+                self._calculate_ways(new_start, finish, way_prefix)
+                if self._use_cache:
+                    self._cache[new_start] = [way[len(way_prefix):] for way in self._store[count_before:]]
+
 
 
     def print_ways(self):
@@ -58,6 +71,7 @@ if __name__ == '__main__':
         lambda x: x * 2 + 1,
     )
 
-    calculator = WaysCalculator(3, 25, visit_rule, operations)
+    calculator = WaysCalculator(3, 25, visit_rule, operations, use_cache=True)
     calculator.calc()
     calculator.print_ways()
+    print(calculator.call_count)
